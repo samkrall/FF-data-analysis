@@ -1,0 +1,82 @@
+#import pandas
+
+import pandas as pd 
+df = pd.read_csv ('') #add stat data between ' '
+
+
+#create dictionary of scoring weights, useful for changing scoring
+scoring_weights = {
+    'receptions':1, # PPR
+    'receiving_yds': 0.1,
+    'receiving_td': 6,
+    'FL': -2, #fumbles lost
+    'rushing_yds': 0.1,
+    'rushing_td': 6,
+    'passing_yds': 0.04,
+    'passing_td': 4,
+    'int': -2
+}
+
+
+#correct scoring
+df['FantasyPoints'] = (
+    df['Receptions']*scoring_weights['receptions'] + df['ReceivingYds']*scoring_weights['receiving_yds'] + \
+    df['ReceivingTD']*scoring_weights['receiving_td'] + df['FL']*scoring_weights['FL'] + \
+    df['RushingYds']*scoring_weights['rushing_yds'] + df['RushingTD']*scoring_weights['rushing_td'] + \
+    df['PassingYds']*scoring_weights['passing_yds'] + df['PassingTD']*scoring_weights['passing_td'] + \
+    df['Int']*scoring_weights['int'] )
+
+
+#add average draft data between ' '
+adp_df = pd.read_csv('')
+
+adp_df['ADP Rank'] = adp_df['AVG'].rank()
+
+
+#cutoff at final starters for 12 man league 
+adp_df_cutoff = adp_df[:120]
+
+
+#empty dictionary of replacement players, iterate thru cutoff database to find final replacement player
+replacement_players = {
+    'RB':'',
+    'WR':'',
+    'QB':'',
+    'TE':''
+}
+
+for _, row in adp_df_cutoff.iterrows():
+    
+    position = row['POS'] 
+    player = row['PLAYER']
+    
+    if position in replacement_players: 
+        replacement_players[position] = player
+
+
+#empty dictionary for replacement value, for each replacement player iterate thru cutoff database to find points scored
+replacement_values = {}
+
+for position, player_name in replacement_players.items():
+  player = df.loc[df['Player']==player_name]
+  replacement_values[position] = player['FantasyPoints'].tolist()[0]
+
+
+#create VOR by substracting replacment value from theoretical value
+pd.set_option('chained_assignment', None)
+
+df = df.loc[df['Pos'].isin(['QB', 'RB', 'WR', 'TE'])]
+
+df['VOR'] = df.apply(
+    lambda row: row['FantasyPoints'] - replacement_values.get(row['Pos']), axis=1
+)
+
+
+# filtering out the columns we need and cleaning up data and displaying final product
+df = df[['Player', 'Pos', 'Team', 'FantasyPoints', 'VOR']] 
+
+pd.set_option('display.max_rows', None)
+
+df['VOR Rank']=df['VOR'].rank(ascending=False)
+
+df.sort_values(by='VOR', ascending=False).head(150)
