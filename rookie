@@ -1,0 +1,85 @@
+'''purpose of this file is to predict rookie points, were going to do so with combine data'''
+
+#import/install packages and set display widths
+import pandas as pd
+import numpy as np
+from matplotlib import pyplot as plt
+import seaborn as sns
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
+
+# formatted table with all rookies 2009-2018
+
+#read in data, select skill players on offense
+df = pd.read_csv('C:/Users/samdk/Desktop/data science/nfl/combine/nfl.csv')
+df = df.loc[(df['Player_Type'] == 'offense') & (df['Position_Type'] == 'backs_receivers')]
+
+#split name from twitter handle
+df[['Name','twitter']] = df['Player'].str.split('\\',expand=True)
+df['Player'] = df['Name']
+
+#split team, round pick, draft year
+df[['Team','Round','Pick','DraftYear']] = df['Drafted..tm.rnd.yr.'].str.split('/',expand=True)
+
+#drop columns i don't want, sort datafram by year and player (name)
+df = df.drop(['DraftYear','Drafted..tm.rnd.yr.','School','Player_Type','Position_Type','twitter','Team','Name','Pick'], axis=1)
+df.sort_values(by=["Year", "Player"])
+
+
+'''
+create a function, given our master combine dataframe
+the year 
+and  a link to pro football reference 
+return a dataframe with combine numbers and fantasy points
+
+def combine_fantasypt(link, year, masterframe)
+'''
+
+def combine_fantasypt(link, year, masterframe):
+    #creating and formatting a datafram from the link that contains the player name in 'player' and fantasy points
+    df_fantasypoints = pd.read_html(link)[0]
+    df_fantasypoints.columns = np.arange(len(df_fantasypoints.columns))
+    df_fantasypoints = df_fantasypoints[[1,26]]
+    df_fantasypoints.rename(columns = {1:'Player',26:'FantasyPoints'}, inplace=True)
+    df_fantasypoints['Player'] = df_fantasypoints.Player.str.replace('[*+]', '')
+    
+    #pulling combine data from mater data frame, merging with fantasy point data and dropping NaN values
+    df_combine = masterframe.loc[masterframe['Year']==year]
+    df_combine = df_combine.merge(df_fantasypoints, how='left',on='Player')
+    df_combine.dropna(subset=['FantasyPoints'], inplace=True)
+    return(df_combine)
+
+#creating urls for each year
+url2009 = 'https://www.pro-football-reference.com/years/2009/fantasy.htm'
+url2010 = 'https://www.pro-football-reference.com/years/2010/fantasy.htm'
+url2011 = 'https://www.pro-football-reference.com/years/2011/fantasy.htm'
+url2012 = 'https://www.pro-football-reference.com/years/2012/fantasy.htm'
+url2013 = 'https://www.pro-football-reference.com/years/2013/fantasy.htm'
+url2014 = 'https://www.pro-football-reference.com/years/2014/fantasy.htm'
+url2015 = 'https://www.pro-football-reference.com/years/2015/fantasy.htm'
+url2016 = 'https://www.pro-football-reference.com/years/2016/fantasy.htm'
+url2017 = 'https://www.pro-football-reference.com/years/2017/fantasy.htm'
+url2018 = 'https://www.pro-football-reference.com/years/2018/fantasy.htm'
+url2019 = 'https://www.pro-football-reference.com/years/2019/fantasy.htm'
+
+
+df2009 = combine_fantasypt(url2009, 2009, df)
+df2010 = combine_fantasypt(url2010, 2010, df)
+df2011 = combine_fantasypt(url2011, 2011, df)
+df2012 = combine_fantasypt(url2012, 2012, df)
+df2013 = combine_fantasypt(url2013, 2013, df)
+df2014 = combine_fantasypt(url2014, 2014, df)
+df2015 = combine_fantasypt(url2015, 2015, df)
+df2016 = combine_fantasypt(url2016, 2016, df)
+df2017 = combine_fantasypt(url2017, 2017, df)
+df2018 = combine_fantasypt(url2018, 2018, df)
+
+#appending all dfs into final df
+df_final = df2009.append([df2010,df2011, df2012, df2013, df2014, df2015, df2016, df2017, df2018], ignore_index=True)
+df_final['FantasyPoints']  =df_final['FantasyPoints'].astype(float, errors='raise')
+df_final = df_final.sort_values(by='FantasyPoints', ascending=False)
+
+#print to csv
+df_final.to_csv('C:/Users/samdk/Desktop/combine.csv')
+
