@@ -83,3 +83,38 @@ df_final = df_final.sort_values(by='FantasyPoints', ascending=False)
 #print to csv
 df_final.to_csv('C:/Users/samdk/Desktop/combine.csv')
 
+#cleaning the data for ML use
+
+#removing letters from round
+df_final['Round'] = df_final.Round.str.replace('[stndrdh]', '')
+
+#8 reps UDFA
+df_final['Round'] = df_final['Round'].fillna(value=8)
+
+#checking nulls
+df_final.isnull().sum()
+
+#binning 'fantasy points'
+df_final.loc[df_final['FantasyPoints']<=85, 'FPbin'] = 0
+df_final.loc[(df_final['FantasyPoints']<=160) & (df_final['FantasyPoints'] > 85), 'FPbin'] = 1
+df_final.loc[(df_final['FantasyPoints']>160), 'FPbin'] = 2
+
+#more exploration
+df_final.describe()
+df_final.hist(figsize=(20,10))
+df_final.plot(kind='density', figsize = (20, 10), subplots=True, layout=(4,3), sharex=False)
+df_final.plot(kind='box', subplots=True, figsize = (20, 10), layout=(4,3), sharex=False, sharey=False)
+sns.countplot(x='FPbin', hue= 'Position', data=df_final) 
+sns.countplot(x='Round', hue= 'FPbin', data=df_final) 
+
+#filling NA values for ML
+tofill = ['Age','Sprint_40yd','Vertical_Jump','Bench_Press_Reps','Broad_Jump','Agility_3cone','Shuttle']
+for i in tofill:
+    df_final[i].fillna(df_final[i].mode()[0], inplace=True)
+    
+#more ML preprocessing
+df_ml = df_final.drop(columns = ['Year','Player'])
+df_ml['Round'] = df_ml.Round.astype(float)
+df_ml['Position'].replace(['RB','WR','TE','QB'],[0,1,2,3], inplace=True) 
+df_ml['Position'] = df_ml.Round.astype(float)
+df_ml['Drafted'].replace(['Yes','No'], [1,0], inplace=True)
