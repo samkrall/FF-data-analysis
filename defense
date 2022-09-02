@@ -1,0 +1,23 @@
+'''
+The goal of this is to give expected points for a defense in fantasy football. I will be doing this
+by simulating various elements of a game and combining the probabilities to get a final result. 
+Elements listed below:
+
+Points - scrape line and over/under, run a poisson distribution, 
+convert the poisson to expected points scored and the expected points scored to FF points
+
+Yards - scrape yds/g from offense and yd/gm from defense, normalize for home team, run a poisson distribution
+convert poisson to expected points scored and expected points scores to FF points
+
+Sacks - scrape sacks/gm offense and defense, normalize for home team, run a poisson and convert to FF points
+
+Fumbles - assume 1/game and convert to points
+
+Interceptions - based off of defenseive ints and QB int rate, run poisson and convert to FF points
+
+D touchdowns - 
+
+ST touchdowns - see ranks
+
+
+'''
