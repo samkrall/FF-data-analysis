@@ -22,28 +22,37 @@ ST touchdowns - see ranks
 
 '''
 
+## the packages needed for this
+import numpy as np
+import pandas as pd
+from scipy.stats import poisson
+import matplotlib.pyplot as plt
 
-#creating a function to return expected fantasy points given an expected number of points given up
+## Points
 
-def points_points(expected):
-  points5 = (poisson.pmf(0, expected))
-  points4 = 0
-  for i in range(1,7):
-    points4 += (poisson.pmf(i, expected))
-  points3 = 0
-  for i in range(8,14):
-    points3 += (poisson.pmf(i, expected))
-  points1 = 0
-  for i in range(15,18):
-    points1 += (poisson.pmf(i, expected))
-  points_neg1 = 0
-  for i in range(28, 35):
-    points_neg1 += (poisson.pmf(i, expected))
-  points_neg3 = 0
-  for i in range(35, 46):
-    points_neg3 += (poisson.pmf(i, expected))
-  points_neg5 = 0
-  for i in range(46, 50):
-    points_neg5 += (poisson.pmf(i, expected))
+#dictionary with fantasy points scored  as key and a list with points range to get that score
 
-  return((points5*5)+(points4*4)+(points3*3)+(points1*1)+(points_neg1*-1)+(points_neg3*-3)+(points_neg5*-5))
+points_dict = {
+    5: [0,0],
+    4: [1,7],
+    3: [8,14],
+    1: [15,18],
+    0: [19,27],
+    -1: [28,35],
+    -3: [35,46],
+    -5:[46,50]
+}
+
+
+#creating a function that given a dictionary with point totals/corresponding FF point scores and an expected 
+#point total from O/U and line, returns the expected value of points
+def points_points(expected_points, scoring_dictionary):
+    #set output to 0
+    final_points_points = 0
+    #iterate through scoring dictionary
+    for key, value in scoring_dictionary.items():
+        #iterate through values stored in scoreing dictionary
+        for i in range(value[0],value[1]):
+            #add the probability of a score multiplied by the fantasy points you would get
+           final_points_points += (key * poisson.pmf(i, expected_points))
+    return(final_points_points)
