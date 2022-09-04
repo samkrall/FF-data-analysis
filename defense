@@ -103,3 +103,11 @@ def yards_points(expected_yards, scoring_dictionary):
         print(poisson.pmf(i, average_ints))
     return(final_int_points)
     
+    #Fumbles
+    def fumble_points(fumbles):
+    final_fumble_points = 0
+    average_fumbles = fumbles
+    average_fumbles_lost = fumbles/2
+    for i in range(0,7):
+        final_fumble_points += 2*(i*poisson.pmf(i, average_fumbles_lost))
+    return(final_fumble_points)
