@@ -84,3 +84,22 @@ def yards_points(expected_yards, scoring_dictionary):
             #add the probability of a score multiplied by the fantasy points you would get
            final_yards_points += (key * poisson.pmf(i, expected_yards))
     return(final_yards_points)
+    
+  ## Sacks
+  def sack_points(defensive_average, opp_offensive_average):
+    final_sack_points = 0
+    average_sacks = (defensive_average + opp_offensive_average)/2
+    for i in range(0,11):
+        final_sack_points += (i*poisson.pmf(i, average_sacks))
+        print(poisson.pmf(i, average_sacks))
+    return(final_sack_points)
+    
+    #Ints
+    def int_points(defensive_average, opp_qb_average):
+    final_int_points = 0
+    average_ints = (defensive_average + opp_qb_average)/2
+    for i in range(0,7):
+        final_int_points += 2*(i*poisson.pmf(i, average_ints))
+        print(poisson.pmf(i, average_ints))
+    return(final_int_points)
+    
