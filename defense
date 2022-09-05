@@ -111,3 +111,14 @@ def yards_points(expected_yards, scoring_dictionary):
     for i in range(0,7):
         final_fumble_points += 2*(i*poisson.pmf(i, average_fumbles_lost))
     return(final_fumble_points)
+    
+   #ST/D touch downs
+   
+   def d_st_td (st_td, d_td):
+    final_d_td_points = 0
+    final_st_td_points = 0
+    for i in range(0,4):
+        final_d_td_points += 6*(i*poisson.pmf(i, d_td))
+    for i in range(0,4):
+        final_st_td_points += 6*(i*poisson.pmf(i, st_td))
+    return(final_d_td_points + final_st_td_points)
