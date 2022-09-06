@@ -28,7 +28,24 @@ import pandas as pd
 from scipy.stats import poisson
 import matplotlib.pyplot as plt
 
+
 ## Points
+
+#data wrangling for points and pipeline for cleaning data from https://bettingdata.com/nfl/odds to a dataframe we can work with
+df_favorite = pd.read_excel('C:/Users/samdk/Desktop/data science/nfl/dstream/2022_week1.xlsx')
+df_favorite.rename(columns = {'Favorite':'Team', 'Underdog':'Opponent'}, inplace=True)
+df_underdog = pd.DataFrame()
+df_underdog['Team'] = df_favorite['Opponent']
+df_underdog['Opponent'] = df_favorite['Team']
+df_underdog['Spread'] = df_favorite['Spread']*-1
+df_underdog['Total'] = df_favorite['Total']
+df_final = df_favorite.append(df_underdog)
+df_final['Expected Score'] = (df_final['Total']+df_final['Spread'])/2
+df_final['Opponent'] = df_final['Opponent'].str.replace('at ','')
+df_final["Home"] = df_final["Team"].map(lambda x: 1 if "at " in x else '0')
+df_final['Team'] = df_final['Team'].str.replace('at ','')
+df_final = df_final.reset_index(drop=True)
+
 
 #dictionary with fantasy points scored  as key and a list with points range to get that score
 
