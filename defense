@@ -55,6 +55,10 @@ df_final = pd.merge(sorted_df, df_2021[['Team','yg_d','intg_d','sacksg_d']], on=
 df_2021.rename(columns = {'Team':'Opponent'}, inplace=True)
 df_final = pd.merge(df_final, df_2021[['Opponent','yg_o','intg_o','sacksg_o']], on='Opponent')
 
+#pipeline for applying functions to dictionary and getting final point total for ind. aspects of defenseive scoring
+df['points_points'] = df.apply(lambda x: points_points(x['points']), axis=1)
+df['yards_points'] = df.apply(lambda x: yards_points(x['yards_def'], x['yards_off']), axis=1)
+df['sack_points'] = df.apply(lambda x: sack_points(x['sacks_def'], x['sacks_off']), axis=1)
 
 #dictionary with fantasy points scored  as key and a list with points range to get that score
 
@@ -72,11 +76,20 @@ points_dict = {
 
 #creating a function that given a dictionary with point totals/corresponding FF point scores and an expected 
 #point total from O/U and line, returns the expected value of points
-def points_points(expected_points, scoring_dictionary):
+def points_points(expected_points):
+    points_dict = {
+    5: [0,0],
+    4: [1,7],
+    3: [8,14],
+    1: [15,18],
+    0: [19,27],
+    -1: [28,35],
+    -3: [35,46],
+    -5:[46,50]}  
     #set output to 0
     final_points_points = 0
     #iterate through scoring dictionary
-    for key, value in scoring_dictionary.items():
+    for key, value in points_dict.items():
         #iterate through values stored in scoreing dictionary
         for i in range(value[0],value[1]):
             #add the probability of a score multiplied by the fantasy points you would get
@@ -101,10 +114,20 @@ def points_points(expected_points, scoring_dictionary):
 #creating a function that given a dictionary with yard totals/corresponding FF point scores and an expected 
 #yards from average of opponent offense and defense, returns the expected value of points
 def yards_points(expected_yards, scoring_dictionary):
+    yards_dictionary = {
+    5: [0,100],
+    3: [101,199],
+    2: [200,299],
+    0: [300,349],
+    -1: [350,399],
+    -3: [400,449],
+    -5:[450,499],
+    -6:[500,549],
+    -7:[550,800]
     #set output to 0
     final_yards_points = 0
     #iterate through scoring dictionary
-    for key, value in scoring_dictionary.items():
+    for key, value in yards_dictionary.items():
         #iterate through values stored in scoreing dictionary
         for i in range(value[0],value[1]):
             #add the probability of a score multiplied by the fantasy points you would get
