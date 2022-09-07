@@ -46,6 +46,14 @@ df_final["Home"] = df_final["Team"].map(lambda x: 1 if "at " in x else '0')
 df_final['Team'] = df_final['Team'].str.replace('at ','')
 df_final = df_final.reset_index(drop=True)
 
+#pipeline for adding yards/ints/sacks off/opponent
+df_2021 = pd.read_excel('C:/Users/samdk/Desktop/data science/nfl/dstream/2021_offense.xlsx')
+df_2021.drop(['Unnamed: 0', 'yards_o', 'int_o', 'Sacks_o', 'yards_d', 'sacks_d', 'int_d'], axis=1, inplace=True)
+df_2021.rename(columns = {'TEAM':'Team'}, inplace=True)
+df_final = pd.merge(sorted_df, df_2021[['Team','yg_d','intg_d','sacksg_d']], on='Team')
+df_2021.rename(columns = {'Team':'Opponent'}, inplace=True)
+df_final = pd.merge(df_final, df_2021[['Opponent','yg_o','intg_o','sacksg_o']], on='Opponent')
+
 
 #dictionary with fantasy points scored  as key and a list with points range to get that score
 
