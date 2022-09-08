@@ -11,14 +11,18 @@ convert poisson to expected points scored and expected points scores to FF point
 
 Sacks - scrape sacks/gm offense and defense, normalize for home team, run a poisson and convert to FF points
 
-Fumbles - assume 1/game and convert to points
+Fumbles - assume 1.2/game with only 50% being recovered and convert to points
 
 Interceptions - based off of defenseive ints and QB int rate, run poisson and convert to FF points
 
-D touchdowns - 
+D/ST touchdowns - ignore for now
 
-ST touchdowns - see ranks
-
+TODO
+-create scraper for 2022
+-play with home/away adjustments for sacks/yards/turnovers/points
+-play with adjustment for 2021 into 2021 (how much 2021 data do we use to model vs. 2022 data)
+-model safeties
+-model D/ST TDs
 
 '''
 
@@ -28,55 +32,13 @@ import pandas as pd
 from scipy.stats import poisson
 import matplotlib.pyplot as plt
 
+##functions
 
-## Points
+#points, takes expected points allowed, uses a dictionary with point values allowed and corresponding fantasy points, uses a poisson distribution to get points allowed
+#and converts to an expected points value
 
-#data wrangling for points and pipeline for cleaning data from https://bettingdata.com/nfl/odds to a dataframe we can work with
-df_favorite = pd.read_excel('C:/Users/samdk/Desktop/data science/nfl/dstream/2022_week1.xlsx')
-df_favorite.rename(columns = {'Favorite':'Team', 'Underdog':'Opponent'}, inplace=True)
-df_underdog = pd.DataFrame()
-df_underdog['Team'] = df_favorite['Opponent']
-df_underdog['Opponent'] = df_favorite['Team']
-df_underdog['Spread'] = df_favorite['Spread']*-1
-df_underdog['Total'] = df_favorite['Total']
-df_final = df_favorite.append(df_underdog)
-df_final['Expected Score'] = (df_final['Total']+df_final['Spread'])/2
-df_final['Opponent'] = df_final['Opponent'].str.replace('at ','')
-df_final["Home"] = df_final["Team"].map(lambda x: 1 if "at " in x else '0')
-df_final['Team'] = df_final['Team'].str.replace('at ','')
-df_final = df_final.reset_index(drop=True)
-
-#pipeline for adding yards/ints/sacks off/opponent
-df_2021 = pd.read_excel('C:/Users/samdk/Desktop/data science/nfl/dstream/2021_offense.xlsx')
-df_2021.drop(['Unnamed: 0', 'yards_o', 'int_o', 'Sacks_o', 'yards_d', 'sacks_d', 'int_d'], axis=1, inplace=True)
-df_2021.rename(columns = {'TEAM':'Team'}, inplace=True)
-sorted_df = df_final.sort_values(by='Team', ascending=True)
-df_final = pd.merge(sorted_df, df_2021[['Team','yg_d','intg_d','sacksg_d']], on='Team')
-df_2021.rename(columns = {'Team':'Opponent'}, inplace=True)
-df_final = pd.merge(df_final, df_2021[['Opponent','yg_o','intg_o','sacksg_o']], on='Opponent')
-
-#pipeline for applying functions to dictionary and getting final point total for ind. aspects of defenseive scoring
-df['points_points'] = df.apply(lambda x: points_points(x['points']), axis=1)
-df['yards_points'] = df.apply(lambda x: yards_points(x['yards_def'], x['yards_off']), axis=1)
-df['sack_points'] = df.apply(lambda x: sack_points(x['sacks_def'], x['sacks_off']), axis=1)
-
-#dictionary with fantasy points scored  as key and a list with points range to get that score
-
-points_dict = {
-    5: [0,0],
-    4: [1,7],
-    3: [8,14],
-    1: [15,18],
-    0: [19,27],
-    -1: [28,35],
-    -3: [35,46],
-    -5:[46,50]
-}
-
-
-#creating a function that given a dictionary with point totals/corresponding FF point scores and an expected 
-#point total from O/U and line, returns the expected value of points
 def points_points(expected_points):
+    #dictionary
     points_dict = {
     5: [0,0],
     4: [1,7],
@@ -95,21 +57,8 @@ def points_points(expected_points):
             #add the probability of a score multiplied by the fantasy points you would get
            final_points_points += (key * poisson.pmf(i, expected_points))
     return(final_points_points)
-    
-    
- ## Yards
- 
- yards_dictionary = {
-    5: [0,100],
-    3: [101,199],
-    2: [200,299],
-    0: [300,349],
-    -1: [350,399],
-    -3: [400,449],
-    -5:[450,499],
-    -6:[500,549],
-    -7:[550,800]
-}
+
+#yards
 
 #creating a function that given a dictionary with yard totals/corresponding FF point scores and an expected 
 #yards from average of opponent offense and defense, returns the expected value of points
@@ -123,7 +72,7 @@ def yards_points(expected_yards, scoring_dictionary):
     -3: [400,449],
     -5:[450,499],
     -6:[500,549],
-    -7:[550,800]
+    -7:[550,800]}
     #set output to 0
     final_yards_points = 0
     #iterate through scoring dictionary
@@ -134,40 +83,76 @@ def yards_points(expected_yards, scoring_dictionary):
            final_yards_points += (key * poisson.pmf(i, expected_yards))
     return(final_yards_points)
     
-  ## Sacks
-  def sack_points(defensive_average, opp_offensive_average):
+#sacks
+
+#create a function that given sacks by defense and sacks allowed by opponent, gives expecte points from sacks
+def sack_points(defensive_average, opp_offensive_average):
     final_sack_points = 0
     average_sacks = (defensive_average + opp_offensive_average)/2
     for i in range(0,11):
         final_sack_points += (i*poisson.pmf(i, average_sacks))
-        print(poisson.pmf(i, average_sacks))
     return(final_sack_points)
-    
-    #Ints
-    def int_points(defensive_average, opp_qb_average):
+
+#Ints
+
+#create a function that given ints by defense and ints thrown by opponent, gives expecte points from ints
+def int_points(defensive_average, opp_qb_average):
     final_int_points = 0
     average_ints = (defensive_average + opp_qb_average)/2
     for i in range(0,7):
         final_int_points += 2*(i*poisson.pmf(i, average_ints))
-        print(poisson.pmf(i, average_ints))
     return(final_int_points)
     
-    #Fumbles
-    def fumble_points(fumbles):
+#fumbles
+
+#create a function given average fumbles per game gives expected points from fumbles
+def fumble_points(fumbles):
     final_fumble_points = 0
     average_fumbles = fumbles
     average_fumbles_lost = fumbles/2
     for i in range(0,7):
         final_fumble_points += 2*(i*poisson.pmf(i, average_fumbles_lost))
     return(final_fumble_points)
-    
-   #ST/D touch downs
-   
-   def d_st_td (st_td, d_td):
-    final_d_td_points = 0
-    final_st_td_points = 0
-    for i in range(0,4):
-        final_d_td_points += 6*(i*poisson.pmf(i, d_td))
-    for i in range(0,4):
-        final_st_td_points += 6*(i*poisson.pmf(i, st_td))
-    return(final_d_td_points + final_st_td_points)
+
+## Points
+
+#data wrangling for points and pipeline for cleaning data from https://bettingdata.com/nfl/odds to a dataframe we can work with
+df_favorite = pd.read_excel('C:/Users/samdk/Desktop/data science/nfl/dstream/2022_week1.xlsx')
+df_favorite.rename(columns = {'Favorite':'Team', 'Underdog':'Opponent'}, inplace=True)
+
+#instantiate underdog data frame, pull the underdog teams from favorite, convert spread to underdog and append underdog to favority to create df with all teams
+df_underdog = pd.DataFrame()
+df_underdog['Team'] = df_favorite['Opponent']
+df_underdog['Opponent'] = df_favorite['Team']
+df_underdog['Spread'] = df_favorite['Spread']*-1
+df_underdog['Total'] = df_favorite['Total']
+df_final = df_favorite.append(df_underdog)
+
+#generate expected score from line and o/u, remove 'at' from team/opponent and create a column for home team
+df_final['Expected Score'] = (df_final['Total']+df_final['Spread'])/2
+df_final['Opponent'] = df_final['Opponent'].str.replace('at ','')
+df_final["Home"] = df_final["Team"].map(lambda x: 1 if "at " in x else '0')
+df_final['Team'] = df_final['Team'].str.replace('at ','')
+df_final = df_final.reset_index(drop=True)
+
+#pipeline for adding yards/ints/sacks off/opponent
+df_2021 = pd.read_excel('C:/Users/samdk/Desktop/data science/nfl/dstream/2021_offense.xlsx')
+df_2021.drop(['Unnamed: 0', 'yards_o', 'int_o', 'Sacks_o', 'yards_d', 'sacks_d', 'int_d'], axis=1, inplace=True)
+df_2021.rename(columns = {'TEAM':'Team'}, inplace=True)
+sorted_df = df_final.sort_values(by='Team', ascending=True)
+df_final = pd.merge(sorted_df, df_2021[['Team','yg_d','intg_d','sacksg_d']], on='Team')
+df_2021.rename(columns = {'Team':'Opponent'}, inplace=True)
+df_final = pd.merge(df_final, df_2021[['Opponent','yg_o','intg_o','sacksg_o']], on='Opponent')
+
+#pipeline for applying functions to dictionary and getting final point total for ind. aspects of defenseive scoring
+df = df_final
+df['points_points'] = df.apply(lambda x: points_points(x['Expected Score']), axis=1)
+df['yards_points'] = df.apply(lambda x: yards_points(x['yg_d'], x['yg_o']), axis=1)
+df['sack_points'] = df.apply(lambda x: sack_points(x['sacksg_d'], x['sacksg_o']), axis=1)
+df['int_points'] = df.apply(lambda x: int_points(x['intg_d'], x['intg_o']), axis=1)
+df['fumble_points'] = df.apply(lambda x: fumble_points(1.1), axis=1)
+
+#combine all the expected points into total
+df['total_points'] = df.apply(lambda x: (x['points_points']+x['int_points']+x['yards_points']+x['sack_points']+x['fumble_points']), axis=1)
+df_x = df[['Team', 'total_points']]
+
