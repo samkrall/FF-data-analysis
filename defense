@@ -40,22 +40,22 @@ import matplotlib.pyplot as plt
 def points_points(expected_points):
     #dictionary
     points_dict = {
-    5: [0,0],
+    5: [0,1],
     4: [1,7],
-    3: [8,14],
-    1: [15,18],
-    0: [19,27],
-    -1: [28,35],
+    3: [7,14],
+    1: [14,18],
+    0: [18,27],
+    -1: [27,35],
     -3: [35,46],
     -5:[46,50]}  
     #set output to 0
     final_points_points = 0
     #iterate through scoring dictionary
     for key, value in points_dict.items():
-        #iterate through values stored in scoreing dictionary
-        for i in range(value[0],value[1]):
-            #add the probability of a score multiplied by the fantasy points you would get
-           final_points_points += (key * poisson.pmf(i, expected_points))
+      #iterate through values stored in scoreing dictionary
+      for i in range(value[0],value[1]):
+        #add the probability of a score multiplied by the fantasy points you would get
+        final_points_points += (key * poisson.pmf(i, expected_points))
     return(final_points_points)
 
 #yards
