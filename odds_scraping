@@ -1,0 +1,40 @@
+#import packages
+import requests
+import pandas
+import numpy
+
+#api key and f strings to call a response from the API
+api_key = 'XXXXX'
+
+response = requests.get(f" https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?apiKey={api_key}&regions=us&markets=spreads,totals&oddsFormat=american")
+
+# Check the status code to make sure the request was successful
+if response.status_code == 200:
+  # The request was successful, so parse the response data
+  data = response.json()
+  print(data)
+else:
+  # There was an error with the request
+  print("Error:", response.status_code)
+  
+#instatiate empty list
+betting_data =[]
+
+#iterate through JSON object and grab needed data
+for i in range(0,16):
+  row = []
+  row.append(data[i]['bookmakers'][10]['markets'][0]['outcomes'][0]['name'])
+  row.append(data[i]['bookmakers'][10]['markets'][1]['outcomes'][0]['point'])
+  row.append(data[i]['bookmakers'][10]['markets'][0]['outcomes'][0]['point'])
+  row.append('away')
+  betting_data.append(row)
+  row = []
+  row.append(data[i]['bookmakers'][10]['markets'][0]['outcomes'][1]['name'])
+  row.append(data[i]['bookmakers'][10]['markets'][1]['outcomes'][1]['point'])
+  row.append(data[i]['bookmakers'][10]['markets'][0]['outcomes'][1]['point'])
+  row.append('home')
+  betting_data.append(row)
+  
+#create dataframe
+df = pd.DataFrame(betting_data, columns = ['Team','O/U','Spread','Home/Away'])
+df.head(32)
