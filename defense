@@ -25,23 +25,12 @@ TODO
 -model D/ST TDs
 
 '''
-#package install
-%pip install nfl_data_py --upgrade
-
-## the packages needed for this
-import numpy as np
-import pandas as pd
-from scipy.stats import poisson
-import matplotlib.pyplot as plt
-import requests
-import nfl_data_py as nfl
-
-##scraping data
+#scraping
 
 #scraping betting data
 
 #api key and f strings to call a response from the API
-api_key = 'XXX'
+api_key = '092d76719032c6c95ca51b49e81dc378'
 
 response = requests.get(f" https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?apiKey={api_key}&regions=us&markets=spreads,totals&oddsFormat=american")
 
@@ -54,9 +43,11 @@ else:
   # There was an error with the request
   print("Error:", response.status_code)
 
+
+
 betting_data =[]
 
-for i in range(0,15):
+for i in range(0,16):
   row = []
   row.append(data[i]['bookmakers'][10]['markets'][0]['outcomes'][0]['name'])
   row.append(data[i]['bookmakers'][10]['markets'][1]['outcomes'][0]['point'])
@@ -75,6 +66,30 @@ df_bet = pd.DataFrame(betting_data, columns = ['Team','O/U','Spread','Home/Away'
 
 #renaming teams to 3 letter abbreviation
 df_bet['Team'].replace({'Atlanta Falcons':'ATL', 'Baltimore Ravens':'BAL', 'Buffalo Bills':'BUF', 'Chicago Bears':'CHI', 'Carolina Panthers':'CAR', 'Detroit Lions':'DET', 'Cincinnati Bengals':'CIN', 'New England Patriots':'NE','Cleveland Browns':'CLE',\
+                       'New Orleans Saints':'NO','Houston Texans':'HOU','Tennessee Titans':'TEN','Kansas City Chiefs':'KC','Seattle Seahawks':'SEA','Minnesota Vikings':'MIN','New York Giants':'NYG', 'San Francisco 49ers':'SF','Washington Commanders':'WAS',\
+                       'Dallas Cowboys':'DAL','Philadelphia Eagles':'PHI','Las Vegas Raiders':'LV','Pittsburgh Steelers':'PIT','Green Bay Packers':'GB','Miami Dolphins':'MIA','Denver Broncos':'DEN','Los Angeles Rams':'LA','Arizona Cardinals':'ARI',\
+                       'Tampa Bay Buccaneers':'TB','Indianapolis Colts':'IND', 'Los Angeles Chargers':'LAC','New York Jets':'NYJ','Jacksonville Jaguars':'JAX'}, inplace=True)
+
+#creating df with teams/opponents
+schedule = []
+for i in range(0,16):
+  row=[]
+  row.append(data[i]['bookmakers'][10]['markets'][0]['outcomes'][1]['name'])
+  row.append(data[i]['bookmakers'][10]['markets'][0]['outcomes'][0]['name'])
+  schedule.append(row)
+
+df1 = pd.DataFrame(schedule, columns=['Team','Opponent'])
+df2 = pd.DataFrame({'Team': df1['Opponent'], 'Opponent':df1['Team']})
+
+df_schedule = pd.concat([df1, df2])
+df_schedule = df_schedule.reset_index(drop=True)
+
+#team names to abbreviations
+df_schedule['Team'].replace({'Atlanta Falcons':'ATL', 'Baltimore Ravens':'BAL', 'Buffalo Bills':'BUF', 'Chicago Bears':'CHI', 'Carolina Panthers':'CAR', 'Detroit Lions':'DET', 'Cincinnati Bengals':'CIN', 'New England Patriots':'NE','Cleveland Browns':'CLE',\
+                       'New Orleans Saints':'NO','Houston Texans':'HOU','Tennessee Titans':'TEN','Kansas City Chiefs':'KC','Seattle Seahawks':'SEA','Minnesota Vikings':'MIN','New York Giants':'NYG', 'San Francisco 49ers':'SF','Washington Commanders':'WAS',\
+                       'Dallas Cowboys':'DAL','Philadelphia Eagles':'PHI','Las Vegas Raiders':'LV','Pittsburgh Steelers':'PIT','Green Bay Packers':'GB','Miami Dolphins':'MIA','Denver Broncos':'DEN','Los Angeles Rams':'LA','Arizona Cardinals':'ARI',\
+                       'Tampa Bay Buccaneers':'TB','Indianapolis Colts':'IND', 'Los Angeles Chargers':'LAC','New York Jets':'NYJ','Jacksonville Jaguars':'JAX'}, inplace=True)
+df_schedule['Opponent'].replace({'Atlanta Falcons':'ATL', 'Baltimore Ravens':'BAL', 'Buffalo Bills':'BUF', 'Chicago Bears':'CHI', 'Carolina Panthers':'CAR', 'Detroit Lions':'DET', 'Cincinnati Bengals':'CIN', 'New England Patriots':'NE','Cleveland Browns':'CLE',\
                        'New Orleans Saints':'NO','Houston Texans':'HOU','Tennessee Titans':'TEN','Kansas City Chiefs':'KC','Seattle Seahawks':'SEA','Minnesota Vikings':'MIN','New York Giants':'NYG', 'San Francisco 49ers':'SF','Washington Commanders':'WAS',\
                        'Dallas Cowboys':'DAL','Philadelphia Eagles':'PHI','Las Vegas Raiders':'LV','Pittsburgh Steelers':'PIT','Green Bay Packers':'GB','Miami Dolphins':'MIA','Denver Broncos':'DEN','Los Angeles Rams':'LA','Arizona Cardinals':'ARI',\
                        'Tampa Bay Buccaneers':'TB','Indianapolis Colts':'IND', 'Los Angeles Chargers':'LAC','New York Jets':'NYJ','Jacksonville Jaguars':'JAX'}, inplace=True)
@@ -98,29 +113,26 @@ count_df.rename(columns={'sack':'games'}, inplace=True)
 column = count_df['games']
 offensive_df = offensive_df.assign(games=column)
 
-#defensive team stats/munging
-defensive_df = df.groupby(['game_id', 'defteam']).sum().groupby(['defteam']).sum()
-defensive_df = defensive_df.rename(columns={'yards_gained':'def_yards_gained', 'sack':'def_sack', 'interception': 'def_interception'})
-column1 = defensive_df['def_yards_gained']
-column2 = defensive_df['def_sack']
-column3 = defensive_df['def_interception']
-
-offensive_df = offensive_df.assign(def_yards_gained = column1, def_sack=column2, def_interception=column3)
-
-#turning aggregate into per game
-
-def divide_by_games(col):
-  return col.div(offensive_df['games'])
-
-offensive_df[['yards_gained','sack', 'interception', 'def_yards_gained', 'def_sack', 'def_interception']] = \
-offensive_df[['yards_gained','sack', 'interception', 'def_yards_gained', 'def_sack', 'def_interception']].apply(divide_by_games)
-
 #resetting index and renaming for a merge with betting data
 offensive_df.reset_index(inplace=True)
-offensive_df = offensive_df.rename(columns={'posteam':'Team'})
+offensive_df = offensive_df.rename(columns={'posteam':'Opponent'})
 
-#merging stat/betting datat into a single dataframe
-df_final = pd.merge(df_bet, offensive_df, on=['Team'], how='inner')
+#defensive data scraping and munging
+defensive_df = df.groupby(['game_id', 'defteam']).sum().groupby(['defteam']).sum()
+defensive_df.reset_index(inplace=True)
+defensive_df = defensive_df.rename(columns={'yards_gained':'def_yards_gained', 'sack':'def_sack', 'interception': 'def_interception', 'defteam':'Team'})
+
+#merging disparate dataframes into one
+df_final = pd.merge(df_schedule, df_bet, on=['Team'], how='inner')
+df_final = pd.merge(df_final, defensive_df, on=['Team'], how='inner')
+df_final = pd.merge(df_final, offensive_df, on=['Opponent'], how='inner')
+
+#translating season stats into per game stats
+def divide_by_games(col):
+  return col.div(df_final['games'])
+
+df_final[['yards_gained','sack', 'interception', 'def_yards_gained', 'def_sack', 'def_interception']] = \
+df_final[['yards_gained','sack', 'interception', 'def_yards_gained', 'def_sack', 'def_interception']].apply(divide_by_games)
 
 ##functions
 
