@@ -1,0 +1,45 @@
+#final
+
+#package install
+%pip install nfl_data_py --upgrade
+
+#library import
+import nfl_data_py as nfl
+import pandas as pd
+import numpy as np
+
+#data gathering, year on first line, thru week on second line
+df = nfl.import_pbp_data([2022])
+df = df.loc[df['week']<=15]
+
+#filtering data columns to relevent columns for this script
+df = df[['game_id','posteam','defteam','yards_gained','sack','passer','interception']]
+
+#data munging
+offensive_df = filtered_df.groupby(['game_id', 'posteam']).sum().groupby(['posteam']).sum()
+
+#calc number of games played
+count_df = filtered_df.groupby(['game_id', 'posteam']).sum().groupby(['posteam']).count()
+count_df.drop(labels = ['yards_gained', 'interception'], axis=1, inplace=True)
+count_df.rename(columns={'sack':'games'}, inplace=True)
+column = count_df['games']
+offensive_df = offensive_df.assign(games=column)
+
+#defensive team stats/munging
+defensive_df = filtered_df.groupby(['game_id', 'defteam']).sum().groupby(['defteam']).sum()
+defensive_df = defensive_df.rename(columns={'yards_gained':'def_yards_gained', 'sack':'def_sack', 'interception': 'def_interception'})
+column1 = defensive_df['def_yards_gained']
+column2 = defensive_df['def_sack']
+column3 = defensive_df['def_interception']
+
+offensive_df = offensive_df.assign(def_yards_gained = column1, def_sack=column2, def_interception=column3)
+
+#turning aggregate into per game
+
+def divide_by_games(col):
+  return col.div(offensive_df['games'])
+
+offensive_df[['yards_gained','sack', 'interception', 'def_yards_gained', 'def_sack', 'def_interception']] = \
+offensive_df[['yards_gained','sack', 'interception', 'def_yards_gained', 'def_sack', 'def_interception']].apply(divide_by_games)
+
+offensive_df.head()
