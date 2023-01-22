@@ -1,30 +1,4 @@
-'''
-The goal of this is to give expected points for a defense in fantasy football. I will be doing this
-by simulating various elements of a game and combining the probabilities to get a final result. 
-Elements listed below:
 
-Points - scrape line and over/under, run a poisson distribution, 
-convert the poisson to expected points scored and the expected points scored to FF points
-
-Yards - scrape yds/g from offense and yd/gm from defense, normalize for home team, run a poisson distribution
-convert poisson to expected points scored and expected points scores to FF points
-
-Sacks - scrape sacks/gm offense and defense, normalize for home team, run a poisson and convert to FF points
-
-Fumbles - assume 1.2/game with only 50% being recovered and convert to points
-
-Interceptions - based off of defenseive ints and QB int rate, run poisson and convert to FF points
-
-D/ST touchdowns - ignore for now
-
-TODO
--create scraper for 2022
--play with home/away adjustments for sacks/yards/turnovers/points
--play with adjustment for 2021 into 2021 (how much 2021 data do we use to model vs. 2022 data)
--model safeties
--model D/ST TDs
-
-'''
 #package install
 %pip install nfl_data_py --upgrade
 
