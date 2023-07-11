@@ -1,0 +1,94 @@
+'''
+create dataframe with defensive team stats by game
+'''
+
+#import modules
+import pandas as pd
+import numpy as np
+import nfl_data_py as nfl
+
+#import plat by play data from relevant years
+year_list = []
+for i in range(2001,2020):
+    year_list.append(i)
+
+#create pbp dataframe
+df_pbp = nfl.import_pbp_data(years=year_list)
+
+#filtering out penalty plays and postseason games
+filt = df_pbp['penalty'] == 0
+df_pbp = df_pbp[filt]
+filt = df_pbp['season_type'] == 'REG'
+df_pbp = df_pbp[filt]
+df_pbp.shape
+
+#aggregate and rename columns
+game_stat_df = df_pbp.groupby(['game_id', 'defteam']).agg({
+    'yards_gained':'sum',
+    'sack':'sum',
+    'interception':'sum',
+    'fumble_lost':'sum',
+    'safety':'sum',
+    'posteam_score_post':'max' 
+})
+
+new_columns = {'yards_gained': 'yards allowed', 'fumble_lost':'fumble recovery','posteam_score_post': 'points allowed'}
+game_stat_df = game_stat_df.rename(columns=new_columns)
+game_stat_df.reset_index(inplace = True)
+
+
+#filter for return touch down
+filt = df_pbp['return_touchdown'] == 1
+df_return = df_pbp[filt]
+
+#xclude kickoffs/punts
+plays_to_exclude = ['kickoff', 'punt']
+df_return = df_return[~df_return['play_type'].isin(plays_to_exclude)]
+df_return = df_return[['game_id','return_touchdown']]
+
+#aggregate data and reset index
+return_df = df_return.groupby('game_id').agg({
+    'return_touchdown':'sum'
+})
+return_df.reset_index(inplace = True)  
+
+game_stat_df = pd.merge(game_stat_df, df_return, on='game_id', how='left')
+
+#create dicts and functions to calculate final defensive fantasy points
+yards_dictionary = {
+5: [0,100],
+3: [101,199],
+2: [200,299],
+0: [300,349],
+-1: [350,399],
+-3: [400,449],
+-5:[450,499],
+-6:[500,549],
+-7:[550,1500]}
+
+points_dictionary = {
+5: [0,1],
+4: [1,7],
+3: [7,14],
+1: [14,18],
+0: [18,27],
+-1: [27,35],
+-3: [35,46],
+-5:[46,200]}
+    
+
+def calculate_yard_points(yards):
+    for yard_points, point_range in yards_dictionary.items():
+        if yards <= point_range[1]:
+            return(int(yard_points))
+
+def calculate_point_points(points):
+    for point_points, point_range in points_dictionary.items():
+        if points <= point_range[1]:
+            return(int(point_points))
+
+#calc final fantasy points
+game_stat_df['fantasy points'] = game_stat_df.apply(lambda row: (calculate_yard_points(row['yards allowed']))+(calculate_point_points(row['points allowed']))+row['sack']+(row['interception']*2)+(row['fumble recovery']*2)+(row['safety']*2+(row['return_touchdown']*6)), axis=1)
+game_stat_df = game_stat_df.sort_values('fantasy points', ascending=False)
+
+game_stat_df.head()
