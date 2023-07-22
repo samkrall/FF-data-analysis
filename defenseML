@@ -46,13 +46,20 @@ plays_to_exclude = ['kickoff', 'punt']
 df_return = df_return[~df_return['play_type'].isin(plays_to_exclude)]
 df_return = df_return[['game_id','return_touchdown']]
 
+
 #aggregate data and reset index
 return_df = df_return.groupby('game_id').agg({
     'return_touchdown':'sum'
 })
-return_df.reset_index(inplace = True)  
+
+return_df.reset_index(inplace = True)
+
+
+# return_df.fillna(0)
 
 game_stat_df = pd.merge(game_stat_df, df_return, on='game_id', how='left')
+
+game_stat_df = game_stat_df.fillna(0)
 
 #create dicts and functions to calculate final defensive fantasy points
 yards_dictionary = {
@@ -89,6 +96,5 @@ def calculate_point_points(points):
 
 #calc final fantasy points
 game_stat_df['fantasy points'] = game_stat_df.apply(lambda row: (calculate_yard_points(row['yards allowed']))+(calculate_point_points(row['points allowed']))+row['sack']+(row['interception']*2)+(row['fumble recovery']*2)+(row['safety']*2+(row['return_touchdown']*6)), axis=1)
-game_stat_df = game_stat_df.sort_values('fantasy points', ascending=False)
 
-game_stat_df.head()
+
