@@ -97,4 +97,90 @@ def calculate_point_points(points):
 #calc final fantasy points
 game_stat_df['fantasy points'] = game_stat_df.apply(lambda row: (calculate_yard_points(row['yards allowed']))+(calculate_point_points(row['points allowed']))+row['sack']+(row['interception']*2)+(row['fumble recovery']*2)+(row['safety']*2+(row['return_touchdown']*6)), axis=1)
 
+df_pbp = nfl.import_pbp_data(years=[2002])
 
+game_stat_df = df_pbp.groupby(['game_id', 'defteam', 'posteam', 'home_team', 'away_team', 'week']).agg({
+    'yards_gained':'sum',
+    'sack':'sum',
+    'interception':'sum',
+    'fumble_lost':'sum',
+    'safety':'sum',
+    'spread_line':'mean',
+    'total_line':'mean'
+    
+})
+game_stat_df.reset_index(inplace = True)
+
+def extract_year(game_id):
+    parts = game_id.split('_')
+    return(parts[0])
+
+game_stat_df['year'] = game_stat_df['game_id'].apply(extract_year)
+
+dfd = game_stat_df
+dfd['game'] = 1
+dfd = dfd.sort_values(['defteam', 'year','week'])
+
+# Group the DataFrame by team
+grouped = dfd.groupby('defteam')
+
+# Calculate the cumulative sum of yards for each team
+dfd['aggregate_yards'] = (grouped['yards_gained'].cumsum() - dfd['yards_gained'])
+dfd['total_games'] = (grouped['game'].cumsum() - dfd['game'])
+dfd['ypg'] = dfd['aggregate_yards']/dfd['total_games']
+
+dfd['aggregate_sack'] = (grouped['sack'].cumsum() - dfd['sack'])
+dfd['spg'] = dfd['aggregate_sack']/dfd['total_games']
+
+dfd['turnovers'] = dfd['fumble_lost']+dfd['interception']
+dfd['aggregate_turnovers'] = (grouped['turnovers'].cumsum() - dfd['turnovers'])
+dfd['tpg'] = dfd['aggregate_turnovers']/dfd['total_games']
+#Reset the DataFrame index
+dfd = dfd.reset_index(drop=True)
+
+dfo = game_stat_df
+dfo['game'] = 1
+dfo = dfo.sort_values(['posteam', 'year','week'])
+
+# Group the DataFrame by team
+grouped = dfo.groupby('posteam')
+
+# Calculate the cumulative sum of yards for each team
+dfo['aggregate_yards'] = (grouped['yards_gained'].cumsum() - dfo['yards_gained'])
+dfo['total_games'] = (grouped['game'].cumsum() - dfo['game'])
+dfo['ypg_o'] = dfo['aggregate_yards']/dfo['total_games']
+
+dfo['aggregate_sack'] = (grouped['sack'].cumsum() - dfo['sack'])
+dfo['spg_o'] = dfo['aggregate_sack']/dfo['total_games']
+
+dfo['turnovers'] = dfo['fumble_lost']+dfo['interception']
+dfo['aggregate_turnovers'] = (grouped['turnovers'].cumsum() - dfo['turnovers'])
+dfo['tpg_o'] = dfo['aggregate_turnovers']/dfo['total_games']
+#Reset the DataFrame index
+dfo = dfo.reset_index(drop=True)
+
+dfo = dfo[['game_id', 'posteam', 'spg_o','tpg_o','ypg_o']]
+df = pd.merge(dfd, dfo, on=['game_id', 'posteam'])
+df.head()
+
+#home or away
+def determine_home(row):
+    if row['defteam'] == row['home_team']:
+        return 1
+    else:
+        return 0
+    
+df['home'] = df.apply(determine_home, axis=1)
+
+def projected_points(row):
+    if row['defteam'] == row['home_team']:
+        return ((row['total_line']/2)-(row['spread_line']/2))
+    else:
+        return ((row['total_line']/2)+(row['spread_line']/2))
+    
+df['projected_points'] = df.apply(projected_points, axis=1)
+
+game_stat_df = game_stat_df[['game_id','defteam','fantasy points']]
+
+final_df = pd.merge(df, game_stat_df, on=['game_id', 'defteam'])
+final_df.head()
